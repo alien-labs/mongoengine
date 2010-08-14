@@ -18,6 +18,7 @@ class QuerySetTest(unittest.TestCase):
         class Person(Document):
             name = StringField()
             age = IntField()
+            meta = { 'allow_inheritance': True }
         self.Person = Person
 
     def test_initialisation(self):
@@ -381,6 +382,7 @@ class QuerySetTest(unittest.TestCase):
         # Check polymorphism still works
         class Employee(self.Person):
             salary = IntField(db_field='wage')
+            meta = { 'allow_inheritance': True }
 
         employee = Employee(name='test employee', age=40, salary=30000)
         employee.save()
@@ -1092,7 +1094,7 @@ class QuerySetTest(unittest.TestCase):
         """
         class BlogPost(Document):
             date = DateTimeField()
-            meta = {'indexes': ['-date']}
+            meta = {'indexes': ['-date'], 'allow_inheritance': True}
 
         # Indexes are lazy so use list() to perform query
         list(BlogPost.objects)

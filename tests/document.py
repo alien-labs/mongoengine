@@ -15,6 +15,7 @@ class DocumentTest(unittest.TestCase):
         class Person(Document):
             name = StringField()
             age = IntField()
+            meta = { 'allow_inheritance': True }
         self.Person = Person
 
     def test_drop_collection(self):
@@ -93,11 +94,16 @@ class DocumentTest(unittest.TestCase):
 
     def test_polymorphic_queries(self):
         """Ensure that the correct subclasses are returned from a query"""
-        class Animal(Document): pass
-        class Fish(Animal): pass
-        class Mammal(Animal): pass
-        class Human(Mammal): pass
-        class Dog(Mammal): pass
+        class Animal(Document):
+          meta = { 'allow_inheritance': True }
+        class Fish(Animal):
+          meta = { 'allow_inheritance': True }
+        class Mammal(Animal):
+          meta = { 'allow_inheritance': True }
+        class Human(Mammal):
+          meta = { 'allow_inheritance': True }
+        class Dog(Mammal):
+          meta = { 'allow_inheritance': True }
 
         Animal().save()
         Fish().save()
@@ -121,6 +127,7 @@ class DocumentTest(unittest.TestCase):
         """
         class Employee(self.Person):
             salary = IntField()
+            meta = { 'allow_inheritance': True }
 
         self.assertTrue('name' in Employee._fields)
         self.assertTrue('salary' in Employee._fields)
@@ -142,11 +149,6 @@ class DocumentTest(unittest.TestCase):
 
         Animal.drop_collection()
 
-        def create_dog_class():
-            class Dog(Animal):
-                pass
-        self.assertRaises(ValueError, create_dog_class)
-        
         # Check that _cls etc aren't present on simple documents
         dog = Animal(name='dog')
         dog.save()
@@ -157,20 +159,10 @@ class DocumentTest(unittest.TestCase):
 
         Animal.drop_collection()
 
-        def create_employee_class():
-            class Employee(self.Person):
-                meta = {'allow_inheritance': False}
-        self.assertRaises(ValueError, create_employee_class)
-        
         # Test the same for embedded documents
         class Comment(EmbeddedDocument):
             content = StringField()
             meta = {'allow_inheritance': False}
-
-        def create_special_comment():
-            class SpecialComment(Comment):
-                pass
-        self.assertRaises(ValueError, create_special_comment)
 
         comment = Comment(content='test')
         self.assertFalse('_cls' in comment.to_mongo())
@@ -258,16 +250,16 @@ class DocumentTest(unittest.TestCase):
         BlogPost.drop_collection()
 
         info = BlogPost.objects._collection.index_information()
-        # _id, types, '-date', 'tags', ('cat', 'date')
-        self.assertEqual(len(info), 5)
+        # _id, '-date', 'tags', ('cat', 'date')
+        self.assertEqual(len(info), 4)
 
         # Indexes are lazy so use list() to perform query
         list(BlogPost.objects)
         info = BlogPost.objects._collection.index_information()
         info = [value['key'] for key, value in info.iteritems()]
-        self.assertTrue([('_types', 1), ('category', 1), ('addDate', -1)] 
+        self.assertTrue([('category', 1), ('addDate', -1)] 
                         in info)
-        self.assertTrue([('_types', 1), ('addDate', -1)] in info)
+        self.assertTrue([('addDate', -1)] in info)
         # tags is a list field so it shouldn't have _types in the index
         self.assertTrue([('tags', 1)] in info)
         
@@ -280,10 +272,10 @@ class DocumentTest(unittest.TestCase):
         list(ExtendedBlogPost.objects)
         info = ExtendedBlogPost.objects._collection.index_information()
         info = [value['key'] for key, value in info.iteritems()]
-        self.assertTrue([('_types', 1), ('category', 1), ('addDate', -1)] 
+        self.assertTrue([('category', 1), ('addDate', -1)] 
                         in info)
-        self.assertTrue([('_types', 1), ('addDate', -1)] in info)
-        self.assertTrue([('_types', 1), ('title', 1)] in info)
+        self.assertTrue([('addDate', -1)] in info)
+        self.assertTrue([('title', 1)] in info)
 
         BlogPost.drop_collection()
 
