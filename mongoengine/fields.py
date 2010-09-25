@@ -20,6 +20,18 @@ __all__ = ['StringField', 'IntField', 'FloatField', 'BooleanField',
 
 RECURSIVE_REFERENCE_CONSTANT = 'self'
 
+
+class FieldWithConnection(BaseField):
+  """Field that requires a MongoDB connection to initialize and validate.
+  """
+
+  @classmethod
+  def _get_db(cls):
+      """Get pymongo Database object to route all operations to for this
+      field.
+      """
+      return _get_db()
+
 class StringField(BaseField):
     """A unicode string field.
     """
@@ -250,7 +262,7 @@ class EmbeddedDocumentField(BaseField):
         return self.to_mongo(value)
 
 
-class ListField(BaseField):
+class ListField(FieldWithConnection):
     """A list field that wraps a standard field, allowing multiple instances
     of the field to be used as a list in the database.
     """
@@ -282,7 +294,7 @@ class ListField(BaseField):
                 for value in value_list:
                     # Dereference DBRefs
                     if isinstance(value, (pymongo.dbref.DBRef)):
-                        value = _get_db().dereference(value)
+                        value = self._get_db().dereference(value)
                         deref_list.append(referenced_type._from_son(value))
                     else:
                         deref_list.append(value)
@@ -373,7 +385,7 @@ class DictField(BaseField):
     def lookup_member(self, member_name):
         return self.basecls(db_field=member_name)
 
-class ReferenceField(BaseField):
+class ReferenceField(FieldWithConnection):
     """A reference to a document that will be automatically dereferenced on
     access (lazily).
     """
@@ -407,7 +419,7 @@ class ReferenceField(BaseField):
         value = instance._data.get(self.name)
         # Dereference DBRefs
         if isinstance(value, (pymongo.dbref.DBRef)):
-            value = _get_db().dereference(value)
+            value = self._get_db().dereference(value)
             if value is not None:
                 instance._data[self.name] = self.document_type._from_son(value)
 
@@ -439,7 +451,7 @@ class ReferenceField(BaseField):
     def lookup_member(self, member_name):
         return self.document_type._fields.get(member_name)
 
-class GenericReferenceField(BaseField):
+class GenericReferenceField(FieldWithConnection):
     """A reference to *any* :class:`~mongoengine.document.Document` subclass
     that will be automatically dereferenced on access (lazily).
 
@@ -459,7 +471,7 @@ class GenericReferenceField(BaseField):
     def dereference(self, value):
         doc_cls = get_document(value['_cls'])
         reference = value['_ref']
-        doc = _get_db().dereference(reference)
+        doc = self._get_db().dereference(reference)
         if doc is not None:
             doc = doc_cls._from_son(doc)
         return doc
@@ -511,10 +523,10 @@ class GridFSProxy(object):
     """Proxy object to handle writing and reading of files to and from GridFS
     """
 
-    def __init__(self):
-        self.fs = gridfs.GridFS(_get_db())  # Filesystem instance
-        self.newfile = None                 # Used for partial writes
-        self.grid_id = None                 # Store GridFS id for file
+    def __init__(self, db_object=None):
+        self.fs = gridfs.GridFS(db_object or _get_db()) # Filesystem instance
+        self.newfile = None       # Used for partial writes
+        self.grid_id = None       # Store GridFS id for file
 
     def __getattr__(self, name):
         obj = self.get()
@@ -568,12 +580,12 @@ class GridFSProxy(object):
             msg = "The close() method is only necessary after calling write()"
             warnings.warn(msg)
 
-class FileField(BaseField):
+class FileField(FieldWithConnection):
     """A GridFS storage field.
     """
 
     def __init__(self, **kwargs):
-        self.gridfs = GridFSProxy()
+        self.gridfs = GridFSProxy(db_object=self._get_db())
         super(FileField, self).__init__(**kwargs)
 
     def __get__(self, instance, owner):

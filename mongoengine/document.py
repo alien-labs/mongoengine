@@ -113,8 +113,15 @@ class Document(BaseDocument):
         """Drops the entire collection associated with this
         :class:`~mongoengine.Document` type from the database.
         """
-        db = _get_db()
+        db = cls._get_db()
         db.drop_collection(cls._meta['collection'])
+
+    @classmethod
+    def _get_db(cls):
+        """Get pymongo Database object to route all operations to for this
+        collection.
+        """
+        return _get_db()
 
 
 class MapReduceDocument(object):

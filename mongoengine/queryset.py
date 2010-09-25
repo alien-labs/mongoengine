@@ -1,5 +1,3 @@
-from connection import _get_db
-
 import pprint
 import pymongo
 import re
@@ -856,7 +854,7 @@ class QuerySet(object):
         scope['query'] = query
         code = pymongo.code.Code(code, scope=scope)
 
-        db = _get_db()
+        db = self._document._get_db()
         return db.eval(code, *fields)
 
     def sum(self, field):
@@ -954,7 +952,7 @@ class QuerySetManager(object):
             return self
 
         if self._collection is None:
-            db = _get_db()
+            db = owner._get_db()
             collection = owner._meta['collection']
 
             # Create collection as a capped collection if specified
