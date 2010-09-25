@@ -25,12 +25,20 @@ class FieldWithConnection(BaseField):
   """Field that requires a MongoDB connection to initialize and validate.
   """
 
-  @classmethod
-  def _get_db(cls):
+  def __init__(self, db_object=None, **kwargs):
+      super(FieldWithConnection, self).__init__(**kwargs)
+      self._db_object = db_object
+
+  def _get_db(self):
       """Get pymongo Database object to route all operations to for this
       field.
       """
-      return _get_db()
+      if not self._db_object:
+          return _get_db()
+      elif callable(self._db_object):
+          return self._db_object()
+      else:
+          return self._db_object
 
 class StringField(BaseField):
     """A unicode string field.
@@ -585,8 +593,8 @@ class FileField(FieldWithConnection):
     """
 
     def __init__(self, **kwargs):
-        self.gridfs = GridFSProxy(db_object=self._get_db())
         super(FileField, self).__init__(**kwargs)
+        self.gridfs = GridFSProxy(db_object=self._get_db())
 
     def __get__(self, instance, owner):
         if instance is None:
