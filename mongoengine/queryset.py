@@ -299,6 +299,9 @@ class QuerySet(object):
         return self._cursor_obj
 
     def cursor_args(self, **kwargs):
+        if self._cursor_obj is not None:
+            raise ValueError("Please call cursor_args() before creating the "
+                "cursor object (i.e. order_by())")
         self._cursor_args.update(kwargs)
         return self
 
