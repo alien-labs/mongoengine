@@ -162,6 +162,7 @@ class QuerySet(object):
         self._where_clause = None
         self._loaded_fields = []
         self._ordering = []
+        self._cursor_args = {}
         
         # If inheritance is allowed, only return instances and instances of
         # subclasses of the class being used
@@ -282,7 +283,9 @@ class QuerySet(object):
         if self._cursor_obj is None:
             cursor_args = {}
             if self._loaded_fields:
-                cursor_args = {'fields': self._loaded_fields}
+                cursor_args['fields'] = self._loaded_fields
+            if self._cursor_args:
+                cursor_args.update(self._cursor_args)
             self._cursor_obj = self._collection.find(self._query, 
                                                      **cursor_args)
             # Apply where clauses to cursor
@@ -294,6 +297,10 @@ class QuerySet(object):
                 self.order_by(*self._document._meta['ordering'])
 
         return self._cursor_obj
+
+    def cursor_args(self, **kwargs):
+        self._cursor_args.update(kwargs)
+        return self
 
     @classmethod
     def _lookup_field(cls, document, parts):
