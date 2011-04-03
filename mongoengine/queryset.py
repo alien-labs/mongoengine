@@ -286,8 +286,13 @@ class QuerySet(object):
                 cursor_args['fields'] = self._loaded_fields
             if self._cursor_args:
                 cursor_args.update(self._cursor_args)
-            self._cursor_obj = self._collection.find(self._query, 
+            self._cursor_obj = self._collection.find(self._query,
                                                      **cursor_args)
+            # Hint.
+            if 'hint' in self._cursor_args:
+                self.cursor_obj = self._cursor_obj.hint(
+                    self.cursor_args['hint'])
+
             # Apply where clauses to cursor
             if self._where_clause:
                 self._cursor_obj.where(self._where_clause)
