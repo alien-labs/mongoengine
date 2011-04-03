@@ -698,6 +698,7 @@ class QuerySet(object):
 
     def hint(self, index):
       self._cursor.hint(index)
+      return self
 
     def explain(self, format=False):
         """Return an explain plan record for the
