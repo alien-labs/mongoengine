@@ -1,5 +1,8 @@
 import pprint
 import pymongo
+import pymongo.code
+import pymongo.objectid
+import pymongo.dbref
 import re
 import copy
 

@@ -4,6 +4,7 @@ from queryset import OperationError
 from connection import _get_db
 
 import pymongo
+import pymongo.errors
 
 
 __all__ = ['Document', 'EmbeddedDocument', 'ValidationError', 'OperationError']
