@@ -1110,10 +1110,11 @@ class QuerySetTest(unittest.TestCase):
 
         class MixedPerson(Document):
             meta = {
-              'collection': Person.objects._collection.name
+              'collection': Person.objects._collection.name,
+              'mixed_fields': True,
             }
-            name = StringField(db_field='p', mixed=True)
-            age = IntField(db_field='a', mixed=True)
+            name = StringField(db_field='p')
+            age = IntField(db_field='a')
 
         expect_person = Person(name="Gigi", age=13)
         expect_person.save()
