@@ -18,7 +18,10 @@ class QuerySetTest(unittest.TestCase):
         class Person(Document):
             name = StringField()
             age = IntField()
-            meta = { 'allow_inheritance': True }
+            meta = {
+              'allow_inheritance': True,
+              'create_indexes': True
+            }
         self.Person = Person
 
         class Traits(EmbeddedDocument):
@@ -936,7 +939,11 @@ class QuerySetTest(unittest.TestCase):
         """
         class BlogPost(Document):
             date = DateTimeField()
-            meta = {'indexes': ['-date'], 'allow_inheritance': True}
+            meta = {
+              'indexes': ['-date'],
+              'allow_inheritance': True,
+              'create_indexes': True,
+            }
 
         # Indexes are lazy so use list() to perform query
         list(BlogPost.objects)
@@ -949,7 +956,10 @@ class QuerySetTest(unittest.TestCase):
 
         class BlogPost(Document):
             title = StringField()
-            meta = {'allow_inheritance': False}
+            meta = {
+              'allow_inheritance': False,
+              'create_indexes': True,
+            }
 
         # _types is not used on objects where allow_inheritance is False
         list(BlogPost.objects)
@@ -1027,6 +1037,10 @@ class QuerySetTest(unittest.TestCase):
             title = StringField()
             date = DateTimeField()
             location = GeoPointField()
+
+            meta = {
+              'create_indexes': True
+            }
             
             def __unicode__(self):
                 return self.title

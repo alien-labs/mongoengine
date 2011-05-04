@@ -15,7 +15,10 @@ class DocumentTest(unittest.TestCase):
         class Person(Document):
             name = StringField()
             age = IntField()
-            meta = { 'allow_inheritance': True }
+            meta = {
+              'allow_inheritance': True,
+              'create_indexes': True,
+            }
         self.Person = Person
 
     def test_drop_collection(self):
@@ -232,6 +235,28 @@ class DocumentTest(unittest.TestCase):
 
         Log.drop_collection()
 
+    def test_no_auto_index(self):
+        """Ensure indexes are not created by default.
+        """
+        class BlogPost(Document):
+            date = DateTimeField(db_field='addDate', default=datetime.now,
+                unique=True)
+            category = StringField(unique_with="tags")
+            tags = ListField(StringField())
+            meta = {
+                'indexes': [
+                    '-date', 
+                    'tags',
+                    ('category', '-date')
+                ],
+            }
+        list(BlogPost.objects())
+        BlogPost(date=datetime.utcnow(), category="bla", tags=["bla"]).save()
+        info = BlogPost.objects._collection.index_information()
+        # _id
+        self.assertEqual(len(info), 1)
+        BlogPost.drop_collection()
+
     def test_indexes(self):
         """Ensure that indexes are used when meta[indexes] is specified.
         """
@@ -245,6 +270,7 @@ class DocumentTest(unittest.TestCase):
                     'tags',
                     ('category', '-date')
                 ],
+                'create_indexes': True,
             }
 
         BlogPost.drop_collection()
@@ -265,7 +291,10 @@ class DocumentTest(unittest.TestCase):
         
         class ExtendedBlogPost(BlogPost):
             title = StringField()
-            meta = {'indexes': ['title']}
+            meta = {
+              'indexes': ['title'],
+              'create_indexes': True,
+            }
 
         BlogPost.drop_collection()
 
@@ -286,6 +315,10 @@ class DocumentTest(unittest.TestCase):
             title = StringField()
             slug = StringField(unique=True)
 
+            meta = {
+                'create_indexes': True,
+            }
+
         BlogPost.drop_collection()
 
         post1 = BlogPost(title='test1', slug='test')
@@ -302,6 +335,9 @@ class DocumentTest(unittest.TestCase):
             title = StringField()
             date = EmbeddedDocumentField(Date)
             slug = StringField(unique_with='date.year')
+            meta = {
+                'create_indexes': True,
+            }
 
         BlogPost.drop_collection()
 

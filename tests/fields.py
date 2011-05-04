@@ -682,6 +682,10 @@ class FieldTest(unittest.TestCase):
             title = StringField()
             location = GeoPointField()
 
+            meta = {
+                'create_indexes': True
+            }
+
         Event.drop_collection()
         event = Event(title="Coltrane Motion @ Double Door",
                       location=[41.909889, -87.677137])

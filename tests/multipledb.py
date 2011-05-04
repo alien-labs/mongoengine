@@ -17,6 +17,7 @@ class MultipleDatabaseTest(unittest.TestCase):
             age = IntField()
             meta = {
               'indexes': ['name'],
+              'create_indexes': True,
             }
 
         class Alien(Document):
@@ -24,7 +25,8 @@ class MultipleDatabaseTest(unittest.TestCase):
             galaxy = StringField()
             has_mass = BooleanField()
             meta = {
-              'indexes': ['galaxy', 'has_mass']
+              'indexes': ['galaxy', 'has_mass'],
+              'create_indexes': True,
             }
 
             @classmethod
