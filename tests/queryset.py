@@ -1048,6 +1048,68 @@ class QuerySetTest(unittest.TestCase):
         
         Event.drop_collection()
 
+    def test_mixed_field_names(self):
+
+        class Person(Document):
+            name = StringField()
+            age = IntField()
+
+        class NonMixedPerson(Document):
+            meta = {
+              'collection': Person.objects._collection.name
+            }
+            name = StringField(db_field='p')
+            age = IntField(db_field='a')
+
+        class MixedPerson(Document):
+            meta = {
+              'collection': Person.objects._collection.name
+            }
+            name = StringField(db_field='p', mixed=True)
+            age = IntField(db_field='a', mixed=True)
+
+        expect_person = Person(name="Gigi", age=13)
+        expect_person.save()
+
+        # Plain read.
+        person = Person.objects().first()
+        self.assert_(person)
+        self.assertEqual(person.id, expect_person.id)
+        self.assertEqual(person.name, expect_person.name)
+        self.assertEqual(person.age, expect_person.age)
+
+        # Strict short field names should read None.
+        non_mixed_person = NonMixedPerson.objects().first()
+        self.assert_(non_mixed_person)
+        self.assertEqual(non_mixed_person.id, expect_person.id)
+        self.assertEqual(non_mixed_person.name, None)
+        self.assertEqual(non_mixed_person.age, None)
+
+        # Mixed field names should work fine.
+        mixed_person = MixedPerson.objects().first()
+        self.assert_(mixed_person)
+        self.assertEqual(mixed_person.id, expect_person.id)
+        self.assertEqual(mixed_person.name, expect_person.name)
+        self.assertEqual(mixed_person.age, expect_person.age)
+
+        # Now save the document, fields should be saved with short names.
+        mixed_person.save()
+
+        # Strict short fields should now work.
+        non_mixed_person = NonMixedPerson.objects().first()
+        self.assert_(non_mixed_person)
+        self.assertEqual(non_mixed_person.id, expect_person.id)
+        self.assertEqual(non_mixed_person.name, expect_person.name)
+        self.assertEqual(non_mixed_person.age, expect_person.age)
+
+        # Strict long fields should read None.
+        person = Person.objects().first()
+        self.assert_(person)
+        self.assertEqual(person.id, expect_person.id)
+        self.assertEqual(person.name, None)
+        self.assertEqual(person.age, None)
+
+
 
 class QTest(unittest.TestCase):
 

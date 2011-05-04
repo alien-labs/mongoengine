@@ -27,7 +27,7 @@ class BaseField(object):
     
     def __init__(self, db_field=None, name=None, required=False, default=None, 
                  unique=False, unique_with=None, primary_key=False,
-                 validation=None, choices=None):
+                 validation=None, choices=None, mixed=False):
         self.db_field = (db_field or name) if not primary_key else '_id'
         if name:
             import warnings
@@ -41,6 +41,8 @@ class BaseField(object):
         self.primary_key = primary_key
         self.validation = validation
         self.choices = choices
+        # Support mixed short/long field names.
+        self.mixed = mixed
 
     def __get__(self, instance, owner):
         """Descriptor for retrieving a value from a field in a document. Do 
@@ -437,14 +439,16 @@ class BaseDocument(object):
                 return None
             cls = subclasses[class_name]
 
-        present_fields = data.keys()
-
+        data_args = {}
         for field_name, field in cls._fields.items():
             if field.db_field in data:
-                data[field_name] = field.to_python(data[field.db_field])
+                data_args[field_name] = field.to_python(data[field.db_field])
+            elif field.mixed and field_name in data:
+                # Field suports mixed short/long names.
+                data_args[field_name] = field.to_python(data[field_name])
 
-        obj = cls(**data)
-        obj._present_fields = present_fields
+        obj = cls(**data_args)
+        obj._present_fields = data_args.keys()
         return obj
     
     def __eq__(self, other):
