@@ -320,13 +320,13 @@ class QuerySet(object):
         for field_name in parts:
             if field is None:
                 # Look up first field from the document
-                field = document._fields[field_name]
+                field = document._fields.get(field_name)
             else:
                 # Look up subfield on the previous field
                 field = field.lookup_member(field_name)
-                if field is None:
-                    raise InvalidQueryError('Cannot resolve field "%s"'
-                                            % field_name)
+            if field is None:
+                raise InvalidQueryError('Cannot resolve field "%s"'
+                                        % field_name)
             fields.append(field)
         return fields
 
@@ -678,7 +678,7 @@ class QuerySet(object):
             self._loaded_fields += ['_cls']
         return self
 
-    def order_by(self, *keys):
+    def order_by(self, *keys, **kwargs):
         """Order the :class:`~mongoengine.queryset.QuerySet` by the keys. The
         order may be specified by prepending each of the keys by a + or a -.
         Ascending order is assumed.
@@ -687,13 +687,25 @@ class QuerySet(object):
             prefixed with **+** or **-** to determine the ordering direction
         """
         key_list = []
+        ignore_lookup_errors = kwargs.get('ignore_lookup_errors', False)
         for key in keys:
             direction = pymongo.ASCENDING
             if key[0] == '-':
                 direction = pymongo.DESCENDING
             if key[0] in ('-', '+'):
                 key = key[1:]
-            key_list.append((key, direction))
+
+            # Resolve key to mongoengine nested field or raise error.
+            key_parts = key.split('.')
+            try:
+                key_fields = self._lookup_field(self._document, key_parts)
+                field_names = [field.db_field for field in key_fields]
+            except InvalidQueryError:
+                if ignore_lookup_errors:
+                    field_names = key_parts
+                else:
+                    raise
+            key_list.append(('.'.join(field_names), direction))
 
         self._ordering = key_list
         self._cursor.sort(key_list)

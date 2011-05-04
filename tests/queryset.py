@@ -21,6 +21,16 @@ class QuerySetTest(unittest.TestCase):
             meta = { 'allow_inheritance': True }
         self.Person = Person
 
+        class Traits(EmbeddedDocument):
+            height = IntField(db_field='h')
+            colour = StringField()
+        class ShortFieldsPerson(Document):
+            name = StringField(db_field='p')
+            age = IntField(db_field='a')
+            traits = EmbeddedDocumentField(Traits, db_field='t')
+        self.ShortFieldsPerson = ShortFieldsPerson
+        self.Traits = Traits
+
     def test_initialisation(self):
         """Ensure that a QuerySet is correctly initialised by QuerySetManager.
         """
@@ -708,6 +718,42 @@ class QuerySetTest(unittest.TestCase):
         ages = [p.age for p in self.Person.objects.order_by('-name')]
         self.assertEqual(ages, [30, 40, 20])
 
+    def test_order_by_with_short_fields(self):
+        """Ensure that QuerySets may be ordered.
+        """
+        self.ShortFieldsPerson(name="User A", age=20,
+            traits=self.Traits(height=30)).save()
+        self.ShortFieldsPerson(name="User B", age=40,
+            traits=self.Traits(height=40)).save()
+        self.ShortFieldsPerson(name="User C", age=30,
+            traits=self.Traits(height=20)).save()
+
+        names = [p.name for p in self.ShortFieldsPerson.objects.order_by('-age')]
+        self.assertEqual(names, ['User B', 'User C', 'User A'])
+
+        names = [p.name for p in self.ShortFieldsPerson.objects.order_by('+age')]
+        self.assertEqual(names, ['User A', 'User C', 'User B'])
+
+        names = [p.name for p in self.ShortFieldsPerson.objects.order_by('age')]
+        self.assertEqual(names, ['User A', 'User C', 'User B'])
+
+        ages = [p.age for p in self.ShortFieldsPerson.objects.order_by('-name')]
+        self.assertEqual(ages, [30, 40, 20])
+
+        ages = [p.age for p in
+            self.ShortFieldsPerson.objects.order_by('traits.height')]
+        self.assertEqual(ages, [30, 20, 40])
+        ages = [p.age for p in
+            self.ShortFieldsPerson.objects.order_by('-traits.height')]
+        self.assertEqual(ages, [40, 20, 30])
+
+        self.assertRaises(InvalidQueryError,
+            self.ShortFieldsPerson.objects.order_by, '-t')
+        self.assertRaises(InvalidQueryError,
+            self.ShortFieldsPerson.objects.order_by, 'traits.h')
+        self.ShortFieldsPerson.objects.order_by('bogus',
+            ignore_lookup_errors=True)
+
     def test_item_frequencies(self):
         """Ensure that item frequencies are properly generated from lists.
         """
@@ -972,6 +1018,7 @@ class QuerySetTest(unittest.TestCase):
 
     def tearDown(self):
         self.Person.drop_collection()
+        self.ShortFieldsPerson.drop_collection()
 
     def test_geospatial_operators(self):
         """Ensure that geospatial queries are working.
