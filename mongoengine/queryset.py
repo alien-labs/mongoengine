@@ -819,11 +819,12 @@ class QuerySet(object):
             # Explicitly provide 'multi=False' to newer versions of PyMongo
             # as the default may change to 'True'
             if pymongo.version >= '1.1.1':
-                self._collection.update(self._query, update, safe=safe_update, 
-                                        upsert=upsert, multi=False)
+                return self._collection.update(self._query, update,
+                    safe=safe_update, upsert=upsert, multi=False)
             else:
                 # Older versions of PyMongo don't support 'multi'
-                self._collection.update(self._query, update, safe=safe_update)
+                return self._collection.update(self._query, update,
+                    safe=safe_update)
         except pymongo.errors.OperationFailure, e:
             raise OperationError(u'Update failed [%s]' % unicode(e))
 
