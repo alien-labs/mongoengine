@@ -57,7 +57,7 @@ class Document(BaseDocument):
 
     __metaclass__ = TopLevelDocumentMetaclass
 
-    def save(self, safe=True, force_insert=False):
+    def save(self, safe=True, force_insert=False, collection=None):
         """Save the :class:`~mongoengine.Document` to the database. If the
         document already exists, it will be updated, otherwise it will be
         created.
@@ -68,11 +68,12 @@ class Document(BaseDocument):
         :param safe: check if the operation succeeded before returning
         :param force_insert: only try to create a new document, don't allow 
             updates of existing documents
+        :param collection: overwrite collection object to use
         """
         self.validate()
         doc = self.to_mongo()
         try:
-            collection = self.__class__.objects._collection
+            collection = collection or self.__class__.objects._collection
             if force_insert:
                 object_id = collection.insert(doc, safe=safe)
             else:
@@ -85,16 +86,18 @@ class Document(BaseDocument):
         id_field = self._meta['id_field']
         self[id_field] = self._fields[id_field].to_python(object_id)
 
-    def delete(self, safe=False):
+    def delete(self, safe=False, qset=None):
         """Delete the :class:`~mongoengine.Document` from the database. This
         will only take effect if the document has been previously saved.
 
         :param safe: check if the operation succeeded before returning
+        :param qset: overwrite QuerySet object to use
         """
         id_field = self._meta['id_field']
         object_id = self._fields[id_field].to_mongo(self[id_field])
         try:
-            self.__class__.objects(**{id_field: object_id}).delete(safe=safe)
+            qset = qset or self.__class__.objects(**{id_field: object_id})
+            qset.delete(safe=safe)
         except pymongo.errors.OperationFailure, err:
             message = u'Could not delete document (%s)' % err.message
             raise OperationError(message)
