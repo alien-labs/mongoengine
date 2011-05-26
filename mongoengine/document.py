@@ -57,7 +57,7 @@ class Document(BaseDocument):
 
     __metaclass__ = TopLevelDocumentMetaclass
 
-    def save(self, safe=True, force_insert=False, collection=None):
+    def save(self, safe=True, force_insert=False, qset=None):
         """Save the :class:`~mongoengine.Document` to the database. If the
         document already exists, it will be updated, otherwise it will be
         created.
@@ -68,12 +68,14 @@ class Document(BaseDocument):
         :param safe: check if the operation succeeded before returning
         :param force_insert: only try to create a new document, don't allow 
             updates of existing documents
-        :param collection: overwrite collection object to use
+        :param qset: overwrite QuerySet object to use
         """
         self.validate()
         doc = self.to_mongo()
         try:
-            collection = collection or self.__class__.objects._collection
+            if qset is None:
+              qset = self.__class__.objects
+            collection = qset._collection
             if force_insert:
                 object_id = collection.insert(doc, safe=safe)
             else:
@@ -96,7 +98,8 @@ class Document(BaseDocument):
         id_field = self._meta['id_field']
         object_id = self._fields[id_field].to_mongo(self[id_field])
         try:
-            qset = qset or self.__class__.objects(**{id_field: object_id})
+            if qset is None:
+              qset = self.__class__.objects(**{id_field: object_id})
             qset.delete(safe=safe)
         except pymongo.errors.OperationFailure, err:
             message = u'Could not delete document (%s)' % err.message
